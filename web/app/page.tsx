@@ -69,7 +69,7 @@ export default function Home() {
           style={{ padding: '0.5rem', width: '70%' }}
         />
         <button type="submit" style={{ padding: '0.5rem 1rem', marginLeft: '0.5rem' }}>
-          Tambah Tugas
+          Tambah Tugas Update
         </button>
       </form>
 
