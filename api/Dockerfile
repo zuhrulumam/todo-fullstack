@@ -1,7 +1,7 @@
 FROM php:8.4-cli-alpine
 
-RUN apk add --no-cache $PHPIZE_DEPS \
-    && docker-php-ext-install pdo pdo_mysql \
+RUN apk add --no-cache $PHPIZE_DEPS postgresql-dev \
+    && docker-php-ext-install pdo pdo_pgsql \
     && apk del $PHPIZE_DEPS
 
 WORKDIR /app
