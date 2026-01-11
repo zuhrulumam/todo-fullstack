@@ -1,0 +1,77 @@
+name: Deploy to EasyPanel
+
+on:
+  push:
+    tags:
+      - 'stg-api-*'
+      - 'stg-web-*'
+      - 'prod-api-*'
+      - 'prod-web-*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Parse tag and determine deployment
+        id: parse
+        run: |
+          TAG=${{ github.ref_name }}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          
+          # Extract environment (stg/prod)
+          if [[ $TAG == stg-* ]]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          elif [[ $TAG == prod-* ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          fi
+          
+          # Extract service (api/web)
+          if [[ $TAG == *-api-* ]]; then
+            echo "service=api" >> $GITHUB_OUTPUT
+            
+            # Get webhook URL
+            if [[ $TAG == stg-* ]]; then
+              echo "webhook_url=${{ secrets.EASYPANEL_STAGING_API_WEBHOOK }}" >> $GITHUB_OUTPUT
+            else
+              echo "webhook_url=${{ secrets.EASYPANEL_PROD_API_WEBHOOK }}" >> $GITHUB_OUTPUT
+            fi
+            
+          elif [[ $TAG == *-web-* ]]; then
+            echo "service=web" >> $GITHUB_OUTPUT
+            
+            # Get webhook URL
+            if [[ $TAG == stg-* ]]; then
+              echo "webhook_url=${{ secrets.EASYPANEL_STAGING_WEB_WEBHOOK }}" >> $GITHUB_OUTPUT
+            else
+              echo "webhook_url=${{ secrets.EASYPANEL_PROD_WEB_WEBHOOK }}" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Deploy to EasyPanel
+        run: |
+          echo "🚀 Deploying ${{ steps.parse.outputs.service }} to ${{ steps.parse.outputs.environment }}"
+          echo "📦 Tag: ${{ steps.parse.outputs.tag }}"
+          
+          # Trigger deployment
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST ${{ steps.parse.outputs.webhook_url }})
+          
+          if [ $HTTP_CODE -eq 200 ] || [ $HTTP_CODE -eq 204 ]; then
+            echo "✅ Deployment triggered successfully"
+          else
+            echo "❌ Deployment failed with HTTP code: $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Deployment Complete"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 Tag:         ${{ steps.parse.outputs.tag }}"
+          echo "🎯 Service:     ${{ steps.parse.outputs.service }}"
+          echo "🌍 Environment: ${{ steps.parse.outputs.environment }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
