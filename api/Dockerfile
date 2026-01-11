@@ -12,9 +12,15 @@ COPY . .
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
+# Fix permissions
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
+    && chmod -R 775 storage bootstrap/cache
+
 RUN php artisan config:cache && \
     php artisan route:cache
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Run migrations then start server
+CMD php artisan migrate --force && \
+    php artisan serve --host=0.0.0.0 --port=8000
